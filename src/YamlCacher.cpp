@@ -2,6 +2,7 @@
 #include <memory>
 #include <openssl/md5.h>
 #include <shared_mutex>
+#include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 void get_md5_hash(std::string& a_filename, std::string& r_ret)
 {
@@ -27,7 +28,7 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
-const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml(std::string a_absolute_path) {
+const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml_data(std::string a_absolute_path) {
     std::string current_file_md5;
     get_md5_hash(a_absolute_path, current_file_md5);
     { // read from yaml map and get the yaml if it exists
@@ -45,7 +46,7 @@ const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml(std::string a_
     std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
         
     std::unique_ptr<YamlData> new_data = std::make_unique<YamlData>();
-    new_data->yaml = YAML::LoadFile(a_absolute_path);
+    new_data->yaml_node = YAML::LoadFile(a_absolute_path);
     new_data->cached_file_md5 = current_file_md5;
     
     this->_yaml_cache_map[a_absolute_path] = std::move(new_data);
@@ -53,10 +54,10 @@ const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml(std::string a_
     return this->_yaml_cache_map[a_absolute_path];
 }
 
-YAML::Node YamlCacher::get_yaml(std::string a_absolute_path,
+YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
-  const std::unique_ptr<YamlData>& yaml_data = get_yaml(a_absolute_path);
-  auto yaml = yaml_data->yaml;
+  const std::unique_ptr<YamlData>& yaml_data = get_yaml_data(a_absolute_path);
+  YAML::Node yaml = yaml_data->yaml_node;
   for (auto key : a_keys) {
     yaml = yaml[key];
   }
@@ -70,8 +71,7 @@ YamlCacher *YamlCacher::get_singleton() {
 
 PyObject *YamlCacher::get_py_yaml_object(std::string a_absolute_path,
                                          std::vector<std::string> &a_keys) {
-  YAML::Node yaml = get_yaml(a_absolute_path, a_keys);
-  return yaml_node_to_py_object(yaml);
+  return yaml_node_to_py_object(get_yaml_node(a_absolute_path, a_keys));
 }
 
 PyObject *YamlCacher::yaml_node_to_py_object(

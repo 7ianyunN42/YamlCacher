@@ -57,7 +57,7 @@ REP = 1000
 def benchMarkNewLib():
     start_time = time.time()
     for i in range(REP):
-        get_yaml(YML_PATH)
+        print(get_yaml(YML_PATH))
     end_time = time.time()
     total_time = end_time - start_time
     print(f"Total time taken for {REP} calls: {total_time} seconds")
@@ -75,7 +75,7 @@ def benchMarkOldLib():
 
 def benchMark():
     newlib_time = benchMarkNewLib()
-    oldlib_time = benchMarkOldLib()
-    print(f"New lib is {oldlib_time/newlib_time} times faster than old lib")
+  #  oldlib_time = benchMarkOldLib()
+   # print(f"New lib is {oldlib_time/newlib_time} times faster than old lib")
 if __name__ == "__main__":
     benchMark()
