@@ -12,7 +12,7 @@ mkdir build
 cd build
 
 # run cmake
-cmake ..
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
 
 # run make
 make

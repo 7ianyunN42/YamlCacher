@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-project(TemplateModule) #1
-set(python_wrapper_name template.py) # 4
-set(lib_name libtemplate) # .cpp file name without extension
+project(YamlCacher) #1
+set(python_wrapper_name yaml_cacher.py) # 4
+set(lib_name lib_yaml_cacher) # .cpp file name without extension
 
 
 find_package(Python REQUIRED COMPONENTS Development)
