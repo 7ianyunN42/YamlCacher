@@ -27,20 +27,20 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
-YAML::Node YamlCacher::get_yaml(std::string a_absolute_path) {
+const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml(std::string a_absolute_path) {
     std::string current_file_md5;
-    //get_md5_hash(a_absolute_path, current_file_md5);
-    // { // read from yaml map and get the yaml if it exists
-    //     std::shared_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
-    //     auto it = this->_yaml_cache_map.find(a_absolute_path);
-    //     if (it != this->_yaml_cache_map.end()) {
-    //         const std::unique_ptr<YamlData>& data = it->second;
-    //         // yaml is here, now check md5
-    //         if (current_file_md5 == data->cached_file_md5) {
-    //             return data->yaml;
-    //         } // fall through to re-insert
-    //    }
-    // }
+    get_md5_hash(a_absolute_path, current_file_md5);
+    { // read from yaml map and get the yaml if it exists
+        std::shared_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
+        auto it = this->_yaml_cache_map.find(a_absolute_path);
+        if (it != this->_yaml_cache_map.end()) {
+            const std::unique_ptr<YamlData>& data = it->second;
+            // yaml is here, now check md5
+            if (current_file_md5 == data->cached_file_md5) {
+                return data;
+            } // fall through to re-insert
+       }
+    }
     // either the yaml doesn't exist in map, or the md5 is different, either way we re-insert the entry
     std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
         
@@ -50,18 +50,18 @@ YAML::Node YamlCacher::get_yaml(std::string a_absolute_path) {
     
     this->_yaml_cache_map[a_absolute_path] = std::move(new_data);
 
-    return new_data->yaml;
+    return this->_yaml_cache_map[a_absolute_path];
 }
 
 YAML::Node YamlCacher::get_yaml(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
-  YAML::Node yaml = get_yaml(a_absolute_path);
+  const std::unique_ptr<YamlData>& yaml_data = get_yaml(a_absolute_path);
+  auto yaml = yaml_data->yaml;
   for (auto key : a_keys) {
     yaml = yaml[key];
   }
   return yaml;
 }
-
 
 YamlCacher *YamlCacher::get_singleton() {
   static YamlCacher singleton;

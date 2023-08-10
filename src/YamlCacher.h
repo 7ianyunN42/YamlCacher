@@ -5,17 +5,20 @@
 #include <shared_mutex>
 #include "Python.h"
 #include <object.h>
-#include "rapidyaml-0.5.0.hpp"
+#include "yaml-cpp/yaml.h"
+#include <yaml-cpp/node/node.h>
+
 
 class YamlCacher
 {
+    struct YamlData;
 public:
     static YamlCacher* get_singleton();
 
     PyObject *get_py_yaml_object(std::string a_absolute_path,
                                  std::vector<std::string> &a_keys);
 
-    YAML::Node get_yaml(std::string a_absolute_path);
+    const std::unique_ptr<YamlData>& get_yaml(std::string a_absolute_path);
 
     YAML::Node get_yaml(std::string a_absolute_path,
                       std::vector<std::string>& a_keys);
