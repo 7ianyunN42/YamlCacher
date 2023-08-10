@@ -52,21 +52,8 @@ def load_yml_ref_evaluate(settings):
 
     """
     return settings # skipping everything for now
-    from pulse_sequence.kspace_trajectories.kspace_trajectories_utils import evaluate_functions
-    # reference evaluate #GA Recipe top params
-    settings, reference_dict = extract_dictionary_references(settings, {}, copy.deepcopy(settings))
 
-    # evaluate reference variables
-    if len(reference_dict) != 0:
-        reference_dict = numpy_update(reference_dict, {})
-    settings = numpy_update(settings, reference_dict)
-
-    settings = evaluate_functions(settings, reference_dict)
-
-    return settings
-
-
-REP = 10
+REP = 1000
 def benchMarkNewLib():
     start_time = time.time()
     for i in range(REP):
@@ -86,6 +73,6 @@ def benchMarkOldLib():
 
 def benchMark():
     benchMarkNewLib()
-    benchMarkOldLib()
+   # benchMarkOldLib()
 if __name__ == "__main__":
     benchMark()

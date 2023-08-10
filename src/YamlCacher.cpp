@@ -1,10 +1,56 @@
 #include "YamlCacher.h"
-YAML::Node YamlCacher::get_yaml(std::string a_absolute_path) {
-    auto it = this->_yaml_cache_map.find(a_absolute_path);
-    if (it != this->_yaml_cache_map.end()) {
-        YamlData& data = it->second;
+#include <memory>
+#include <openssl/md5.h>
+#include <shared_mutex>
+#include <yaml-cpp/node/parse.h>
+void get_md5_hash(std::string& a_filename, std::string& r_ret)
+{
+    unsigned char c[MD5_DIGEST_LENGTH];
+    int i;
+    FILE *inFile = fopen(a_filename.c_str(), "rb");
+    MD5_CTX mdContext;
+    int bytes;
+    unsigned char data[1024];
+    if (inFile == NULL) {
+        return;
     }
-  return YAML::LoadFile(a_absolute_path); // for now, just load the file
+    MD5_Init(&mdContext);
+    while ((bytes = fread(data, 1, 1024, inFile)) != 0) {
+        MD5_Update(&mdContext, data, bytes);
+    }
+    MD5_Final(c, &mdContext);
+    fclose(inFile);
+    char buf[33];
+    for (i = 0; i < 16; i++) {
+        sprintf(buf, "%02x", c[i]);
+        r_ret += buf;
+    }
+}
+
+YAML::Node YamlCacher::get_yaml(std::string a_absolute_path) {
+    std::string current_file_md5;
+    //get_md5_hash(a_absolute_path, current_file_md5);
+    // { // read from yaml map and get the yaml if it exists
+    //     std::shared_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
+    //     auto it = this->_yaml_cache_map.find(a_absolute_path);
+    //     if (it != this->_yaml_cache_map.end()) {
+    //         const std::unique_ptr<YamlData>& data = it->second;
+    //         // yaml is here, now check md5
+    //         if (current_file_md5 == data->cached_file_md5) {
+    //             return data->yaml;
+    //         } // fall through to re-insert
+    //    }
+    // }
+    // either the yaml doesn't exist in map, or the md5 is different, either way we re-insert the entry
+    std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
+        
+    std::unique_ptr<YamlData> new_data = std::make_unique<YamlData>();
+    new_data->yaml = YAML::LoadFile(a_absolute_path);
+    new_data->cached_file_md5 = current_file_md5;
+    
+    this->_yaml_cache_map[a_absolute_path] = std::move(new_data);
+
+    return new_data->yaml;
 }
 
 YAML::Node YamlCacher::get_yaml(std::string a_absolute_path,

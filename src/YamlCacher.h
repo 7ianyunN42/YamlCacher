@@ -4,9 +4,8 @@
 #include <mutex>
 #include <shared_mutex>
 #include "Python.h"
-#include "yaml-cpp/yaml.h"
 #include <object.h>
-#include <yaml-cpp/node/node.h>
+#include "rapidyaml-0.5.0.hpp"
 
 class YamlCacher
 {
@@ -23,12 +22,12 @@ public:
 private:
     struct YamlData
     {
-        std::string md5;
+        std::string cached_file_md5;
         std::shared_mutex lock;
         YAML::Node yaml;
     };
 
-    std::unordered_map<std::string, YamlData> _yaml_cache_map;
+    std::unordered_map<std::string, std::unique_ptr<YamlData>> _yaml_cache_map;
     std::shared_mutex _yaml_cache_map_lock;
 
 

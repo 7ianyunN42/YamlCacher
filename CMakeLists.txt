@@ -8,7 +8,9 @@ set(python_wrapper_name yaml_cacher.py) # 4
 set(lib_name lib_yaml_cacher) # .cpp file name without extension
 
 find_package(Python REQUIRED COMPONENTS Development)
-find_package(  yaml-cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
+find_package(OpenSSL REQUIRED)
+
 
 file(GLOB LIB_SOURCE_FILES src/*.cpp)
 
@@ -16,7 +18,7 @@ add_library(${lib_name} MODULE
     ${LIB_SOURCE_FILES}
 )
 set_target_properties(${lib_name} PROPERTIES PREFIX "" OUTPUT_NAME ${lib_name})
-target_link_libraries(${lib_name} PRIVATE Python::Python yaml-cpp)
+target_link_libraries(${lib_name} PRIVATE Python::Python yaml-cpp OpenSSL::Crypto)
 
 execute_process(
     COMMAND python3 -m site --user-site
