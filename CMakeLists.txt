@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
@@ -7,13 +7,16 @@ project(YamlCacher) #1
 set(python_wrapper_name yaml_cacher.py) # 4
 set(lib_name lib_yaml_cacher) # .cpp file name without extension
 
-
 find_package(Python REQUIRED COMPONENTS Development)
+find_package(  yaml-cpp REQUIRED)
 
+file(GLOB LIB_SOURCE_FILES src/*.cpp)
 
-add_library(${lib_name} MODULE src/${lib_name}.cpp)
+add_library(${lib_name} MODULE 
+    ${LIB_SOURCE_FILES}
+)
 set_target_properties(${lib_name} PROPERTIES PREFIX "" OUTPUT_NAME ${lib_name})
-target_link_libraries(${lib_name} PRIVATE Python::Python)
+target_link_libraries(${lib_name} PRIVATE Python::Python yaml-cpp)
 
 execute_process(
     COMMAND python3 -m site --user-site

@@ -1,0 +1,383 @@
+# Blumich style sequence. This sequence collects one phase encode at a time and uses the permanent gradient of the Promaxo scanner as a readout.
+#All RF pulses are chirped pulses with a WURST amplitude weighting. The sequence is designed with the CHORUS and ABTRUSE methods for removing B1 inhomogeneity, with the spin echoes receiving the
+#B1 inhomogeneity removal. The amount of echoes generated are twice the variable "NE", but only half of them are collected, all of which are spin echoes.
+#A phase cycle is used with this sequence, which removes the DC offset from the image. The DC offset comes from the second RF pulse.
+
+#References: This sequence was based on the following papers:
+#Chirped CPMG for well-logging NMR applications, (Casabianca et al)
+#Adjustable, Broadband, Selective Excitation with Uniform Phase, (Cano et al)
+#3D imaging with a single-sided sensor: an open tomograph, (Casanova et al)
+#The WURST kind of pulses in solid state NMR (O'Dell)
+#Improved ultra-broadband chirp excitation (Foroozandeh et al)
+
+# XZOU 
+# 3/22/2022: derived from Readout_y_image_xzou_Composite.yml.
+# 3/23/2022: successfully compiled and returned expected sequence waveform  
+#            --- can't set TF to 1 in this recipe because of the added RF and gradient configuration
+#            --- haven't address the trajectory yet so the kspace is not filled correctly
+# 3/25/2022: addressed the kspace trajectories, sucessfully executed on scanner console - needed manual adjustment of the 180 and 90 RF amplitudes. 
+
+##################################################################################################################################################################################################################
+recipe_name: 'Readout_y_image_xzou_Composite_TF8'
+
+recipe_description:
+
+  description: 'neuro42 3D multi-echo sequence'   # pulse_generator.py: if 'description' is 'realtime', then this is a REALTIME recipe, the number of lines per batch must be equal to the number of phase cycle
+  effective_echo_time: 0.0377          # pulse_generator.py: effective_echo_time is REQUIRED for all recipes; the effective echo time is used as echo time for DICOM data
+
+
+slice_interleaving_grouping:  # The actual slice information used for the sequence 
+  0:
+    slice_locations:    [70.36]      # mT, could be an array such as [61.5, 64.69]
+    meta_parameters:     
+      null       # Don't know where it is used nor what other options are
+
+
+parameters:
+
+  #--- Calibration settings
+  gradient_calibration_type: standard # [null, standard], default is None
+  rf_calibration_enable: False
+  gradient_preemphasis_enable: False  # Currently not used nor investigated
+
+  #--- For gradient calibration. Usd in pulse_generator.py: update_gradient_power()
+  fov: np.array([0.1143, 0.1143])              # In meters 
+
+  #--- For RARE readout gradient waveform
+  '&mirror': False
+  '&effective_te': False                        # Set to 'centered' to stagger (center of echo center of k-space), otherwise False
+  '&undersampling_parameters': {}               # {'center_pattern': 'rectangle', 'spatial_fraction': 0.46, 'total_sampling_fraction': 0.5, 'pattern': 'uniform', 'seed': 113, 'corner_radius': 2.0}
+  '&subset_sampling': {}                        # {'subsets': 1, 'subset_seed': 0}
+  '&subset_number': 0
+
+  #--- For gradient_preemphasis, currently not used nor investigated
+  '&Gxxvalue': -0.14
+  '&Gyyvalue': -0.17
+  '&Gxyvalue': -0.0
+  '&Gyxvalue': +0.0
+
+  #--- Main sequence parameters  
+  '&NPx': 16                                   # Number of phase encodes along the x axis
+  '&NPy': 16                                   # NUmber of phase encodes along the y axis 
+  '&TF': 8                                     # Turbo factor (number of echoes), 
+  
+  tr: 1.0                                       # Seconds, Repetition time
+  
+  slice_locations: [62.5]                       # mT, overwritten by "slice_interleaving_grouping"
+  num_lines_per_batch: 1024                     
+  
+  '&new_amp': 0.24                             # XZOU: haven't been able to use it in gradient configuration
+
+  # 1) Chirp pulse configuration
+  '&BW' : 100000                                 # Bandwidth of chirp pulse in Hz  
+  '&N_fac': 40                                  # N factor for WURST pulses
+
+  # 2) RF pulse amplitude, unitless between (-1,1)  
+  '&max_pwr': 0.2                                # The 180 pulses use maximnum amplitude so no need to make a seperate variable 
+  '&pwr_90': 0.049                               # Amplitude of the 90 pulse, between (-1, 1). 
+ 
+  # 3) RF pulse timing, in seconds
+  '&p180': 0.0015                               # Duration of 180 pulses in seconds
+  '&ET': 0.005                                   # Echo time = tau, the default time interval between the centers of two sequential RF pulses  = 2*tau   
+  '&DWI_offset': 0.0000                         # Promaxo DWI sequence is T2 sequence with longer TE. Should not be used for neuro42 DWI
+
+  tau: np.float(ET)                             # Tau, the default time interval between the centers of two sequential RF pulses = 2*tau, not used in this recipe but pulse_generator
+
+  # 4) Gradient timing, in seconds
+  '&phase_encode_duration': 0.001
+  '&echo_centering_offset': 0.0000   
+  '&rise_time': 0.0003                                                    
+  '&blip_duration': 0.0006
+  
+  # 5) CHORUS method
+  '&CHORUS_fac': 1.6                            # Scaling factor for the duration and amplitude for the first two pulses (90 - 180).
+  '&a180ratio': 1.0                             # Scaling factor for the amplitude of the first 180 pulse
+
+  # 6) Readout
+  '&AT': 0.00128  #0.0004                       # The acquisition time duration
+  echo_processing_method: 'enumerate'           # ['collapse', 'enumerate', 'preserve']. Ensures that echoes are averaged together. 
+
+  # 7) Receiver
+  bw: 100                                        # KHz, receive bandwidth
+  phase_cycle_receiver_phase: np.array([np.pi * 0.5]) # Radian, phase cycle table if used 
+  
+  # --- Gradient preemphasis, currently not used nor investigated
+  preemphasis: 
+    # These are pairs of values given in two columns: (time_constant, gain)
+    G1_terms: np.array([[100.0 / 1000.0, Gxxvalue]])
+    G2_terms: np.array([[100.0 / 1000.0, Gyyvalue]])
+    G1_cross_terms: np.array([[100.0 / 1000.0, Gxyvalue]])  # G1_G2
+    G2_cross_terms: np.array([[100.0 / 1000.0, Gyxvalue]])  # G2_G1
+
+  # --- Sequence Implementation
+  implementation:
+
+    # Used in oulse_interpreter.py _generate_implementation_table()
+    sequence_order: ['G1', 'G3', 'G2','RFTx']    # [phase-encoding, phase-encoding, readout, RFTx]
+    sequence_expansion: 'pairwise'               # {'pairwise', 'combination'}.
+
+    # Measurement  
+    measurement_order: 'inner'                   # {'inner', 'outer'}: inner means measurements repeat, outer means measurements repeat after repeating entire sequence
+    measurements:
+      counts: [1]                                # Number of measurements for averaging
+      bins: [1.0]                                # % of max radii from orgin [0.0, 1.0], always 1.0 here
+
+    # Zero-gradient data, track systemetic changes (frequency, amplitude, phase, etc)
+    add_kspace_center_line_per_batch:
+      enable: True                              # pulse_generator.py: Dummylines is REQUIRED for all recipes
+      dummy_measurements: 10
+ 
+  # --- Noise Measurment
+  noise_measurement:
+   enable: True
+   duration: 0.01                                # Duration of measurement
+   measurements: 30                              # Number of measurements
+
+
+sequence:
+
+  Tx:            # Tx RF pulses, prefixed with 'rf'
+
+    rf_pulse_1:                                  
+      tag: null                # The name of the RF pulse(s) referenced for timing  
+      type: 'excitation'       # [excitation, inversion]
+      flip_angle: 90           # 90 or 180, more like a flag, not used for calculation
+      pulse_evolution: fixed   # ['enumerate','fixed'] pulse_interpretor.py: 'enumerate': pulses evolve verses other pulses on axis (combination), not implemented; 'fixed': pulses follow each other in step 
+      shape:
+        name:  WURST                      
+        evolution:
+          pattern: 'manual'              # Always 'manual', don't know where it is used nor what other options are
+          power_amp: np.array([pwr_90])  # Amplidue of the RF pulse
+          init_phase: np.array([0])      # Phase of the RF pulse
+        parameters:
+          bandwidth: np.float(BW)        
+          N_fac: np.int(N_fac)
+      location:
+        start_time: np.float(rise_time)
+        duration: np.float(2 * p180 * (CHORUS_fac - 1))     # having duration parameter causes flip_angle to be overwritten
+      # Not used nor investigated
+      calibration:
+        duration_scalar: np.float(CHORUS_fac - 1)
+        power_amp_scalar: np.float(max_pwr)
+
+    rf_pulse_2:
+      tag: rf_pulse_1          # The name of the RF pulse(s) referenced for timing 
+      type: 'inversion'        # [excitation, inversion]  
+      flip_angle: 180          # 90 or 180, more like a flag, not used for calculation
+      pulse_evolution: fixed   # ['enumerate','fixed'] pulse_interpretor.py: 'enumerate': pulses evolve verses other pulses on axis (combination), not implemented; 'fixed': pulses follow each other in step
+      shape:
+        name:  WURST 
+        evolution:
+          pattern: 'manual'                                                    # Always 'manual', don't know where it is used nor what other options are
+          power_amp: np.array([max_pwr * np.sqrt(1/CHORUS_fac) * a180ratio])   # Amplidue of the RF pulse
+          init_phase: np.array([np.pi * 0.5])                                  # Phase of the RF pulse
+        parameters:
+          bandwidth: np.float(BW)
+          N_fac: np.int(N_fac)
+      location:
+        start_time: null                      # Automatically calculated from the tagged RF pulse(s)  
+        duration: np.float(p180 * CHORUS_fac)
+        offset: np.float(DWI_offset)
+      # Not used nor investigated
+      calibration:
+        duration_scalar: np.float(CHORUS_fac)
+        power_amp_scalar: np.sqrt(1 / CHORUS_fac) * a180ratio * max_pwr
+
+    rf_pulse_3:
+      tag: rf_pulse_2          # The name of the RF pulse(s) referenced for timing 
+      type: 'inversion'        # [excitation, inversion]
+      flip_angle: 180          # 90 or 180, more like a flag, not used for calculation
+      pulse_evolution: fixed   # ['enumerate','fixed'] pulse_interpretor.py: 'enumerate': pulses evolve verses other pulses on axis (combination), not implemented; 'fixed': pulses follow each other in step
+      multi_echo:              # num_pulses: # must be specified for multi-echo
+        num_pulses: np.int(TF)
+      shape:
+        name:  WURST 
+        evolution:
+          bypass_amp_update: False
+          pattern: 'manual'                      # Always 'manual', don't know where it is used nor what other options are
+          power_amp:  np.array([max_pwr])        # Amplidue of the RF pulse
+          init_phase: np.array([np.pi * 0.5])    # Phase of the RF pulse       
+        parameters:
+          bandwidth: np.float(BW)
+          N_fac: np.int(N_fac)
+      location:
+        start_time: null                         # Automatically calculated from the tagged RF pulse(s)
+        duration: np.float(p180)
+        offset: np.float(DWI_offset + 0.5*ET)
+      # Not used nor investigated
+      calibration:
+        power_amp_scalar: np.float(max_pwr)
+      
+    #Use this pulse to refocus the chirped echoes such that they alternate between spin echoes and spectral echoes
+    rf_pulse_4:
+      tag: rf_pulse_2          # The name of the RF pulse(s) referenced for timing 
+      type: 'inversion'        # [excitation, inversion]
+      flip_angle: 180          # 90 or 180, more like a flag, not used for calculation
+      pulse_evolution: fixed   # ['enumerate','fixed'] pulse_interpretor.py: 'enumerate': pulses evolve verses other pulses on axis (combination), not implemented; 'fixed': pulses follow each other in step
+      multi_echo:              # num_pulses: # must be specified for multi-echo
+        num_pulses: np.int(TF-1)
+      shape:
+        name:  WURST 
+        evolution:
+          bypass_amp_update: False
+          pattern: 'manual'                      # Always 'manual', don't know where it is used nor what other options are
+          power_amp:  np.array([max_pwr])        # Amplidue of the RF pulse
+          init_phase: [0]                        # Phase of the RF pulse, the third set of refocusing pulses       
+        parameters:
+          bandwidth: np.float(BW)
+          N_fac: np.int(N_fac)
+      location:
+        start_time: null                         # Automatically calculated from the tagged RF pulse(s)
+        duration: np.float(p180)
+        offset: np.float(DWI_offset + 1.5*ET)      # This offset should be equal to the previous offset plus tau 
+      # Not used nor investigated
+      calibration:
+        power_amp_scalar: np.float(max_pwr)
+
+  Acq:
+
+    acq_pulse_1:
+      tag: rf_pulse_3
+      type: 'spin'      # pulse_generator.py: Recipes must label acquisition windows with a type (spin or spectral)
+      location:
+        duration: np.float(AT)
+        offset: np.float(-1 * ET * 0.5 + echo_centering_offset)
+
+  G1:  # Phase-encoding direction 
+
+    g1_pulse_1:
+      tag: ['rf_pulse_3', 'acq_pulse_1']   # The names of the RF pulses immediately before and after this gradient 
+      type: phase_encode                  # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two 
+      multi: True
+      imaging_gradient: True              # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses RARE trajectories, True
+      shape:
+        name: tukey
+        evolution:
+          power_amp: eval(MultiEcho_trajectories._3D_TSE(NPx, NPy, 'x', TF, False, 'bottom_up')) # 2D array, number of lines by number of echoes. by default center_out (changed from name 'center')
+          init_phase: []
+          freq_offset: []
+        parameters:
+          alpha: 1.0                      # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                         # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0    
+        duration: np.float(phase_encode_duration)   # Duration of flat portion if it's trapezoid. Because G1 doesn't have enough power, manually multiplied by 1.5 to get the right FOV 
+        offset: 0.0 
+        rise_time: 0.0
+
+    g1_pulse_2:
+      tag: ['acq_pulse_1', 'rf_pulse_4']   # The names of the RF pulses immediately before and after this gradient 
+      type: phase_encode                  # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two 
+      multi: True
+      imaging_gradient: True              # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses RARE trajectories, True
+      shape:
+        name: tukey
+        evolution:
+          power_amp: eval(MultiEcho_trajectories._3D_TSE(NPx, NPy, 'x', TF, True, 'bottom_up')) # 2D array, number of lines by number of echoes. by default center_out (changed from name 'center')
+          init_phase: []
+          freq_offset: []
+        parameters:
+          alpha: 1.0                      # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                         # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0    
+        duration: np.float(phase_encode_duration)   # Duration of flat portion if it's trapezoid. Because G1 doesn't have enough power, manually multiplied by 1.5 to get the right FOV 
+        offset: 0.0 
+        rise_time: 0.0
+
+
+  G2: # Readout direction
+
+    g2_pulse_1:
+      tag: ['acq_pulse_1']               # The names of the RF pulse playing together with this gradient
+      type: readout                      # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two
+      multi: True                       
+      imaging_gradient: False            # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses specific number, False
+      composite: True 
+      shape:
+        name: square
+        evolution:
+          power_amp:   np.repeat(np.linspace(0.24,0.24,int(NPx*NPy/TF))[:,None],TF,axis = 1)   # 2D array, number of lines by number of echoes. 0.24 was experimentally determined for desired FOV in readout direction. XZOU: tried np.array([new_amp]), doesn't work
+          init_phase: []   
+          freq_offset: []
+        parameters:
+          alpha: 1.0                    # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                         # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0 
+        duration: np.float(AT)          # Duration of flat portion if it's trapezoid
+        offset: 0.0
+        rise_time: np.float(rise_time)
+
+    g2_pulse_2: 
+      tag: ['acq_pulse_1']                 # The names of the RF pulses immediately before and after this gradient
+      type: readout                     # # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two. This pulse actually is used as a pre-winder gradient for the readout gradient
+      multi: True
+      imaging_gradient: False             # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses specific number, False
+      composite: True
+      shape:
+        name: square
+        evolution:
+          power_amp: np.repeat(np.linspace(-0.24,-0.24,int(NPx*NPy/TF))[:,None],TF,axis = 1)   # 2D array, number of lines by number of echoes. 0.24 was experimentally determined for desired FOV in readout direction. XZOU: tried  np.linspace(new_amp,new_amp,NPx*NPy), doesn't work
+          init_phase: [] 
+          freq_offset: []
+        parameters:
+          alpha: 1.0                     # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0  
+        duration: np.float(0.5*AT-0.5*rise_time)   # Duration of flat portion if it's trapezoid, changed to the theoretical value 0.5*AT-0.5*rise_time
+        offset: np.float(-0.8*AT-1.8*rise_time )     # -0.75*AT-1.75*rise_time is not a mutple of sampling rate so just round up
+        rise_time: np.float(rise_time)
+
+    g2_pulse_3: 
+      tag: ['acq_pulse_1']                 # The names of the RF pulses immediately before and after this gradient
+      type: readout                     # # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two. This pulse actually is used as a pre-winder gradient for the readout gradient
+      multi: True
+      imaging_gradient: False             # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses specific number, False
+      composite: True
+      shape:
+        name: square
+        evolution:
+          power_amp: np.repeat(np.linspace(-0.24,-0.24,int(NPx*NPy/TF))[:,None],TF,axis = 1)   # 2D array, number of lines by number of echoes. 0.24 was experimentally determined for desired FOV in readout direction. XZOU: tried  np.linspace(new_amp,new_amp,NPx*NPy), doesn't work
+          init_phase: [] 
+          freq_offset: []
+        parameters:
+          alpha: 1.0                     # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0  
+        duration: np.float(0.5*AT-0.5*rise_time)   # Duration of flat portion if it's trapezoid, changed to the theoretical value 0.5*AT-0.5*rise_time
+        offset: np.float(0.8*AT+1.8*rise_time )     # 0.75*AT+1.75*rise_time is not a mutple of sampling rate so just round up
+        rise_time: np.float(rise_time)
+
+
+
+  G3:   # Phase-encoding direction
+
+    g3_pulse_1:
+      tag: ['rf_pulse_3', 'acq_pulse_1']   # The names of the RF pulses immediately before and after this gradient
+      type: phase_encode                  # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two
+      multi: True
+      imaging_gradient: True              # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses RARE trajectories, True
+      shape:
+        name: tukey
+        evolution:
+          power_amp: eval(MultiEcho_trajectories._3D_TSE(NPx, NPy, 'y', TF, False, 'bottom_up')) # 2D array, number of lines by number of echoes. by default center_out (changed from name 'center')
+          init_phase: [] 
+          freq_offset: []
+        parameters:
+          alpha: 1.0                      # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                      # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0
+        duration: np.float(phase_encode_duration)    # Duration of flat portion if it's trapezoid
+        offset: 0.0
+        rise_time: 0.0
+    
+    g3_pulse_2:
+      tag: ['acq_pulse_1', 'rf_pulse_4']   # The names of the RF pulses immediately before and after this gradient 
+      type: phase_encode                  # [phase_encode, slice_select, phase_balancer, readout, prewinder], all requires one tag except that phase_encoding requires two 
+      multi: True
+      imaging_gradient: True              # Flag for whether this gradient goes through calibration if the gradient calibration mode is turned on. Because this gradiernt uses RARE trajectories, True
+      shape:
+        name: tukey
+        evolution:
+          power_amp: eval(MultiEcho_trajectories._3D_TSE(NPx, NPy, 'y', TF, True, 'bottom_up')) # 2D array, number of lines by number of echoes. by default center_out (changed from name 'center')
+          init_phase: []
+          freq_offset: []
+        parameters:
+          alpha: 1.0                      # In shape.py: "tukey" shape requires an alpha parameter to describe this shape, alpha must be 0.0 < alpha < 1.0
+      location:                                         # pulse_generator.py: pulse_duration = pulse['location']['duration'] + pulse['location']['rise_time'] * 2.0    
+        duration: np.float(phase_encode_duration)   # Duration of flat portion if it's trapezoid. Because G1 doesn't have enough power, manually multiplied by 1.5 to get the right FOV 
+        offset: 0.0 
+        rise_time: 0.0
+
