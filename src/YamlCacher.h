@@ -34,7 +34,7 @@ private:
 
 
     PyObject *yaml_node_to_py_object(
-        YAML::Node
+        const YAML::Node
             a_node) // this is expensive; caller when calling GET_YAML_PY()
                     // should be as specific with keys as possible
         ;

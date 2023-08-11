@@ -109,9 +109,9 @@ const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path
 YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
   const YamlData yaml_data = get_yaml_data(a_absolute_path);
-  YAML::Node node = Clone(yaml_data.yaml_node); // grab the og reference
+  YAML::Node node = Clone(yaml_data.yaml_node); // clone the parent reference
   try {
-    for (auto& key : a_keys) {
+    for (auto& key : a_keys) { // traverse the node
       node = node[key];
     }
   } catch (YAML::Exception& e) {
@@ -133,7 +133,7 @@ PyObject *YamlCacher::get_py_yaml_object(std::string a_absolute_path,
 }
 
 PyObject *YamlCacher::yaml_node_to_py_object(
-    YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
+    const YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
                        // should be as specific with keys as possible
 {
   if (a_node.IsScalar()) {
