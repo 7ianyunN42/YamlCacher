@@ -93,8 +93,14 @@ YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
   const YamlData yaml_data = get_yaml_data(a_absolute_path);
   YAML::Node yaml = yaml_data.yaml_node;
-  for (auto key : a_keys) {
-    yaml = yaml[key];
+  try {
+    for (auto key : a_keys) {
+      yaml = yaml[key];
+    }
+  } catch (YAML::Exception& e) {
+    throw std::runtime_error("YamlCacher::get_yaml_node: " + std::string(e.what()));
+  } catch (...) {
+    throw std::runtime_error("YamlCacher::get_yaml_node: Unknown error");
   }
   return yaml;
 }
