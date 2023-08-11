@@ -18,7 +18,7 @@ public:
     PyObject *get_py_yaml_object(std::string a_absolute_path,
                                  std::vector<std::string> &a_keys);
 
-    const std::unique_ptr<YamlData>& get_yaml_data(std::string a_absolute_path);
+    const YamlData get_yaml_data(std::string a_absolute_path);
 
     YAML::Node get_yaml_node(std::string a_absolute_path,
                       std::vector<std::string>& a_keys);
@@ -29,7 +29,7 @@ private:
         YAML::Node yaml_node;
     };
 
-    std::unordered_map<std::string, std::unique_ptr<YamlData>> _yaml_cache_map;
+    std::unordered_map<std::string, YamlData> _yaml_cache_map;
     std::shared_mutex _yaml_cache_map_lock;
 
 

@@ -33,7 +33,7 @@ def load_yml_old(full_path=None, numpy_evaluate=False):
             settings = load_yml_ref_evaluate(settings)
 
     except yaml.YAMLError as _:
-        print("Error loading YAML file: {}".format(full_path))
+        print("Error loading YAML file: {} : {}".format(full_path, _.with_traceback()))
 
     return settings
 
@@ -57,7 +57,7 @@ REP = 1000
 def benchMarkNewLib():
     start_time = time.time()
     for i in range(REP):
-        print(get_yaml(YML_PATH))
+        get_yaml(YML_PATH)
     end_time = time.time()
     total_time = end_time - start_time
     print(f"Total time taken for {REP} calls: {total_time} seconds")

@@ -28,36 +28,32 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
-const std::unique_ptr<YamlCacher::YamlData>& YamlCacher::get_yaml_data(std::string a_absolute_path) {
+const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path) {
     std::string current_file_md5;
     get_md5_hash(a_absolute_path, current_file_md5);
     { // read from yaml map and get the yaml if it exists
-        std::shared_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
+        std::shared_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock); // accessing map
         auto it = this->_yaml_cache_map.find(a_absolute_path);
         if (it != this->_yaml_cache_map.end()) {
-            const std::unique_ptr<YamlData>& data = it->second;
+           YamlData data = it->second;
             // yaml is here, now check md5
-            if (current_file_md5 == data->cached_file_md5) {
-                return data;
+            if (current_file_md5 ==  data.cached_file_md5) {
+                return data; // return a copy of YamlData, so it's safe to be used outside of the lock
             } // fall through to re-insert
        }
     }
     // either the yaml doesn't exist in map, or the md5 is different, either way we re-insert the entry
-    std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock);
-        
-    std::unique_ptr<YamlData> new_data = std::make_unique<YamlData>();
-    new_data->yaml_node = YAML::LoadFile(a_absolute_path);
-    new_data->cached_file_md5 = current_file_md5;
+    std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock); // modifying map
     
-    this->_yaml_cache_map[a_absolute_path] = std::move(new_data);
+    this->_yaml_cache_map.emplace(a_absolute_path, YamlData{current_file_md5, YAML::LoadFile(a_absolute_path)});
 
     return this->_yaml_cache_map[a_absolute_path];
 }
 
 YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
-  const std::unique_ptr<YamlData>& yaml_data = get_yaml_data(a_absolute_path);
-  YAML::Node yaml = yaml_data->yaml_node;
+  const YamlData yaml_data = get_yaml_data(a_absolute_path);
+  YAML::Node yaml = yaml_data.yaml_node;
   for (auto key : a_keys) {
     yaml = yaml[key];
   }
