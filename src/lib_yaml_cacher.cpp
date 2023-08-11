@@ -5,25 +5,34 @@
 
 static PyObject* py_get_yaml(PyObject* self, PyObject* args) {
     // process inputs
-    char* path = NULL;
-    PyObject* py_list = NULL;
-    if (!PyArg_ParseTuple(args, "s|O", &path, &py_list)) {
-        return NULL;
-    }
+    try {
+        char* path = NULL;
+        PyObject* py_list = NULL;
+        if (!PyArg_ParseTuple(args, "s|O", &path, &py_list)) {
+            return NULL;
+        }
 
-    // store the keys in a vector
-    std::vector<std::string> keys;
-    if (py_list != NULL && PyList_Check(py_list)) {
-        Py_ssize_t size = PyList_Size(py_list);
-        for (Py_ssize_t i = 0; i < size; ++i) {
-            PyObject* item = PyList_GetItem(py_list, i);
-            if (PyUnicode_Check(item)) {
-                keys.push_back(PyUnicode_AsUTF8(item));
+        // store the keys in a vector
+        std::vector<std::string> keys;
+        if (py_list != NULL && PyList_Check(py_list)) {
+            Py_ssize_t size = PyList_Size(py_list);
+            for (Py_ssize_t i = 0; i < size; ++i) {
+                PyObject* item = PyList_GetItem(py_list, i);
+                if (PyUnicode_Check(item)) {
+                    keys.push_back(PyUnicode_AsUTF8(item));
+                }
             }
         }
-    }
 
-    return YamlCacher::get_singleton()->get_py_yaml_object(path,  keys);
+        return YamlCacher::get_singleton()->get_py_yaml_object(path,  keys);
+    } catch (std::exception& e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return NULL;
+    } catch (...) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown error");
+        return NULL;
+    }
+    
 }
 
 
