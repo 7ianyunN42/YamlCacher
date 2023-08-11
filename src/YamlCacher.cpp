@@ -1,4 +1,5 @@
 #include "YamlCacher.h"
+#include <algorithm>
 #include <memory>
 #include <openssl/md5.h>
 #include <shared_mutex>
@@ -26,6 +27,44 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
         sprintf(buf, "%02x", c[i]);
         r_ret += buf;
     }
+}
+
+inline bool isNumber(std::string& s) { //
+      if (s.empty()) return false;
+
+      // Check for negative sign
+      size_t pos = 0;
+      if (s[0] == '-') {
+          if (s.length() == 1) return false; // Only a negative sign is not a valid number
+          pos = 1;
+      }
+
+      // Check for digits before the decimal point
+      bool foundDigits = false;
+      while (pos < s.length() && std::isdigit(s[pos])) {
+          foundDigits = true;
+          pos++;
+      }
+
+      // Check for decimal point and digits after it
+      if (pos < s.length() && s[pos] == '.') {
+          pos++;
+          while (pos < s.length() && std::isdigit(s[pos])) {
+              foundDigits = true;
+              pos++;
+          }
+      }
+
+      // If no digits found, it's not a valid number
+      if (!foundDigits) return false;
+
+      // Check for remaining characters
+      while (pos < s.length() && std::isspace(s[pos])) {
+          pos++;
+      }
+
+      // If we reached the end of the string, it's a valid number
+      return pos == s.length();
 }
 
 const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path) {
@@ -75,7 +114,12 @@ PyObject *YamlCacher::yaml_node_to_py_object(
                        // should be as specific with keys as possible
 {
   if (a_node.IsScalar()) {
-    return PyUnicode_FromString(a_node.as<std::string>().c_str());
+    std::string value = a_node.as<std::string>();
+    if (isNumber(value)) {
+      return PyFloat_FromDouble(a_node.as<double>());
+    } else {
+      return PyUnicode_FromString(a_node.as<std::string>().c_str());
+    }
   } else if (a_node.IsSequence()) {
     PyObject *list = PyList_New(0);
     for (auto it = a_node.begin(); it != a_node.end(); ++it) {

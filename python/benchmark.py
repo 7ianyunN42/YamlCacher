@@ -75,7 +75,8 @@ def benchMarkOldLib():
 
 def benchMark():
     newlib_time = benchMarkNewLib()
-  #  oldlib_time = benchMarkOldLib()
-   # print(f"New lib is {oldlib_time/newlib_time} times faster than old lib")
+    oldlib_time = benchMarkOldLib()
+    print(f"New lib is {oldlib_time/newlib_time} times faster than old lib")
 if __name__ == "__main__":
     benchMark()
+    #print(get_yaml(YML_PATH))
