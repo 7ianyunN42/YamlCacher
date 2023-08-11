@@ -29,6 +29,23 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
+enum class BooleanType
+{
+    Undefined,
+    True,
+    False
+};
+
+inline BooleanType getBooleanType(std::string& s) {
+    if (s == "true" || s == "True") {
+        return BooleanType::True;
+    } else if (s == "false" || s == "False") {
+        return BooleanType::False;
+    } else {
+        return BooleanType::Undefined;
+    }
+}
+
 inline bool isNumber(std::string& s) { //
       if (s.empty()) return false;
 
@@ -92,17 +109,17 @@ const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path
 YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
   const YamlData yaml_data = get_yaml_data(a_absolute_path);
-  YAML::Node yaml = yaml_data.yaml_node;
+  YAML::Node node = Clone(yaml_data.yaml_node); // grab the og reference
   try {
-    for (auto key : a_keys) {
-      yaml = yaml[key];
+    for (auto& key : a_keys) {
+      node = node[key];
     }
   } catch (YAML::Exception& e) {
     throw std::runtime_error("YamlCacher::get_yaml_node: " + std::string(e.what()));
   } catch (...) {
     throw std::runtime_error("YamlCacher::get_yaml_node: Unknown error");
   }
-  return yaml;
+  return node;
 }
 
 YamlCacher *YamlCacher::get_singleton() {
@@ -121,9 +138,15 @@ PyObject *YamlCacher::yaml_node_to_py_object(
 {
   if (a_node.IsScalar()) {
     std::string value = a_node.as<std::string>();
-    if (isNumber(value)) {
+    // check if it's boolean
+    BooleanType boolean_type = getBooleanType(value);
+    if (boolean_type == BooleanType::True) {
+      Py_RETURN_TRUE;
+    } else if (boolean_type == BooleanType::False) {
+      Py_RETURN_FALSE;
+    } else if (isNumber(value)) { // check if it's number
       return PyFloat_FromDouble(a_node.as<double>());
-    } else {
+    } else { // or we simply return a string
       return PyUnicode_FromString(a_node.as<std::string>().c_str());
     }
   } else if (a_node.IsSequence()) {
