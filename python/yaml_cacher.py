@@ -1,3 +1,11 @@
+LIB_NAME:str = "lib_yaml_cacher.so"
+def __bootstrap__():
+    from os import path
+    from ctypes import cdll
+    cwd = path.dirname(path.abspath(__file__))
+    cdll.LoadLibrary(path.join(cwd, LIB_NAME))
+__bootstrap__()
+
 from lib_yaml_cacher import get_yaml as get_yaml_impl
 
 def get_yaml(absolute_path:str, keys:'list[str]'=None):
