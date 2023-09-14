@@ -31,6 +31,23 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
+enum class BooleanType
+{
+    Undefined,
+    True,
+    False
+};
+
+inline BooleanType getBooleanType(std::string& s) {
+    if (s == "true" || s == "True") {
+        return BooleanType::True;
+    } else if (s == "false" || s == "False") {
+        return BooleanType::False;
+    } else {
+        return BooleanType::Undefined;
+    }
+}
+
 enum class NumberType{
     INT,
     FLOAT,
@@ -103,17 +120,17 @@ const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path
 YAML::Node YamlCacher::get_yaml_node(std::string a_absolute_path,
                                 std::vector<std::string>& a_keys) {
   const YamlData yaml_data = get_yaml_data(a_absolute_path);
-  YAML::Node yaml = yaml_data.yaml_node;
+  YAML::Node node = Clone(yaml_data.yaml_node); // clone the parent reference
   try {
-    for (auto key : a_keys) {
-      yaml = yaml[key];
+    for (auto& key : a_keys) { // traverse the node
+      node = node[key];
     }
   } catch (YAML::Exception& e) {
     throw std::runtime_error("YamlCacher::get_yaml_node: " + std::string(e.what()));
   } catch (...) {
     throw std::runtime_error("YamlCacher::get_yaml_node: Unknown error");
   }
-  return yaml;
+  return node;
 }
 
 YamlCacher *YamlCacher::get_singleton() {
@@ -141,12 +158,19 @@ PyObject * YamlCacher::yaml_scalar_node_to_py_object(
   } else if (number_type == NumberType::FLOAT) {
     return PyFloat_FromDouble(a_node.as<double>());
   } else {
-    return PyUnicode_FromString(a_node.as<std::string>().c_str());
+    BooleanType bool_type = getBooleanType(value);
+    if (bool_type == BooleanType::True) {
+      Py_RETURN_TRUE;
+    } else if (bool_type == BooleanType::False) {
+      Py_RETURN_FALSE;
+    } else {
+      return PyUnicode_FromString(a_node.as<std::string>().c_str());
+    }
   }
 }
 
 PyObject *YamlCacher::yaml_node_to_py_object(
-    YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
+    const YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
                        // should be as specific with keys as possible
 {
   if (a_node.IsScalar()) {

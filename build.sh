@@ -17,9 +17,9 @@ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
 # run make
 make
 
-# copy .so file to site-packages directory
-echo "Site-packages directory:"
-python3 -m site --user-site
-echo "Copying .so files to site-packages directory..."
-python3 -m site --user-site | xargs -I {} sh -c 'cp ../dist/*.so {}; echo "Copied: " ../dist/*.so'
-echo "Finished copying .so files."
+# # copy .so file to site-packages directory
+# echo "Site-packages directory:"
+# python3 -m site --user-site
+# echo "Copying .so files to site-packages directory..."
+# python3 -m site --user-site | xargs -I {} sh -c 'cp ../dist/*.so {}; echo "Copied: " ../dist/*.so'
+# echo "Finished copying .so files."

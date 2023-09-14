@@ -1,7 +1,7 @@
 
 import time
 import yaml
-from yaml_cacher import get_yaml
+from dist.yaml_cacher import get_yaml
 
 YML_PATH:str = '/home/n42/repo/YamlCacher/test/test.yml'
 

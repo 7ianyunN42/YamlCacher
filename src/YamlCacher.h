@@ -33,8 +33,9 @@ private:
 
   PyObject *yaml_scalar_node_to_py_object(YAML::Node a_node);
 
-  PyObject *yaml_node_to_py_object(
-      YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
-                         // should be as specific with keys as possible
-      ;
+    PyObject *yaml_node_to_py_object(
+        const YAML::Node
+            a_node) // this is expensive; caller when calling GET_YAML_PY()
+                    // should be as specific with keys as possible
+        ;
 };
