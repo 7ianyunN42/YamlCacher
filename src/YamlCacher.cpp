@@ -1,6 +1,8 @@
 #include "YamlCacher.h"
 #include <algorithm>
+#include <dictobject.h>
 #include <memory>
+#include <object.h>
 #include <openssl/md5.h>
 #include <shared_mutex>
 #include <yaml-cpp/node/node.h>
@@ -29,13 +31,19 @@ void get_md5_hash(std::string& a_filename, std::string& r_ret)
     }
 }
 
-inline bool isNumber(std::string& s) { //
-      if (s.empty()) return false;
+enum class NumberType{
+    INT,
+    FLOAT,
+    NONE
+};
+
+inline static NumberType getNumberType(std::string& s) { //
+      if (s.empty()) return NumberType::NONE;
 
       // Check for negative sign
       size_t pos = 0;
       if (s[0] == '-') {
-          if (s.length() == 1) return false; // Only a negative sign is not a valid number
+          if (s.length() == 1) return NumberType::NONE; // Only a negative sign is not a valid number
           pos = 1;
       }
 
@@ -45,9 +53,10 @@ inline bool isNumber(std::string& s) { //
           foundDigits = true;
           pos++;
       }
-
+      bool foundDot = false;
       // Check for decimal point and digits after it
       if (pos < s.length() && s[pos] == '.') {
+          foundDot = true;
           pos++;
           while (pos < s.length() && std::isdigit(s[pos])) {
               foundDigits = true;
@@ -56,7 +65,7 @@ inline bool isNumber(std::string& s) { //
       }
 
       // If no digits found, it's not a valid number
-      if (!foundDigits) return false;
+      if (!foundDigits) return NumberType::NONE;
 
       // Check for remaining characters
       while (pos < s.length() && std::isspace(s[pos])) {
@@ -64,7 +73,9 @@ inline bool isNumber(std::string& s) { //
       }
 
       // If we reached the end of the string, it's a valid number
-      return pos == s.length();
+      if (pos != s.length()) return NumberType::NONE;
+      return foundDot ? NumberType::FLOAT : NumberType::INT;
+
 }
 
 const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path) {
@@ -115,17 +126,31 @@ PyObject *YamlCacher::get_py_yaml_object(std::string a_absolute_path,
   return yaml_node_to_py_object(get_yaml_node(a_absolute_path, a_keys));
 }
 
+
+PyObject * YamlCacher::yaml_scalar_node_to_py_object(
+  YAML::Node a_node
+)
+{
+  if (!a_node.IsScalar()) {
+    throw std::runtime_error("YamlCacher::yaml_scalar_node_to_py_object: node is not scalar");
+  }
+  std::string value = a_node.as<std::string>();
+  NumberType number_type = getNumberType(value);
+  if (number_type == NumberType::INT) {
+    return PyLong_FromLong(a_node.as<long>());
+  } else if (number_type == NumberType::FLOAT) {
+    return PyFloat_FromDouble(a_node.as<double>());
+  } else {
+    return PyUnicode_FromString(a_node.as<std::string>().c_str());
+  }
+}
+
 PyObject *YamlCacher::yaml_node_to_py_object(
     YAML::Node a_node) // this is expensive; caller when calling GET_YAML_PY()
                        // should be as specific with keys as possible
 {
   if (a_node.IsScalar()) {
-    std::string value = a_node.as<std::string>();
-    if (isNumber(value)) {
-      return PyFloat_FromDouble(a_node.as<double>());
-    } else {
-      return PyUnicode_FromString(a_node.as<std::string>().c_str());
-    }
+    return yaml_scalar_node_to_py_object(a_node);
   } else if (a_node.IsSequence()) {
     PyObject *list = PyList_New(0);
     for (auto it = a_node.begin(); it != a_node.end(); ++it) {
@@ -136,10 +161,11 @@ PyObject *YamlCacher::yaml_node_to_py_object(
   } else if (a_node.IsMap()) {
     PyObject *dict = PyDict_New();
     for (auto it = a_node.begin(); it != a_node.end(); ++it) {
-      std::string key = it->first.as<std::string>();
+      YAML::Node key = it->first;
+      PyObject *py_key = yaml_scalar_node_to_py_object(key);
       YAML::Node value = it->second;
       PyObject *py_value = yaml_node_to_py_object(value);
-      PyDict_SetItemString(dict, key.c_str(), py_value);
+      PyDict_SetItem(dict, py_key, py_value);
     }
     return dict;
   } else {
