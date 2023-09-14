@@ -59,7 +59,7 @@ inline static NumberType getNumberType(std::string& s) { //
 
       // Check for negative sign
       size_t pos = 0;
-      if (s[0] == '-') {
+      if (s[0] == '-' || s[0] == '+') {
           if (s.length() == 1) return NumberType::NONE; // Only a negative sign is not a valid number
           pos = 1;
       }
