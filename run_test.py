@@ -1,4 +1,4 @@
-INPUTS_PARENT_FOLDER = "test/unit_tests"
+INPUTS_PARENT_FOLDER = "/home/n42/repo/neuro42-source"
 PRINT_PASSED_TEST:bool = True
 
 import yaml
@@ -43,11 +43,9 @@ def test_yaml_cacher():
             if file.endswith(".yml") or file.endswith(".yaml"):
                 yml_path = os.path.abspath(os.path.join(root, file))
                 if compare_yaml_cacher_to_python_lib(yml_path):
-                    pass
-                    print(f"{file} - pass") if PRINT_PASSED_TEST else None
+                    print(f"{file}\033[92m - PASS\033[0m") if PRINT_PASSED_TEST else None
                 else:
-                    pass
-                    print(f"{file} - fail")
+                    print(f"{file}\033[91m - FAIL\033[0m")
 
 def main():
     test_yaml_cacher()
