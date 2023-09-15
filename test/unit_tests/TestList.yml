@@ -1,0 +1,4 @@
+one_list: [1, 2, 3, 4, 5]
+list_with_float: [1.0, 2.0, 3.0, 4.0, 5.0]
+list_of_list: [[], [], [], [5, 6, 7, 8], ["my", "name", "is", "john"]]
+list_of_mixed_types: [1, 2, 3, "4", "5", '6', '7', 10.5e-1, 8.5e+2]
