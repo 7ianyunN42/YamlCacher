@@ -1,6 +1,7 @@
 #include "YamlCacher.h"
 #include <algorithm>
 #include <dictobject.h>
+#include <iostream>
 #include <memory>
 #include <object.h>
 #include <openssl/md5.h>
@@ -152,21 +153,22 @@ PyObject * YamlCacher::yaml_scalar_node_to_py_object(
     throw std::runtime_error("YamlCacher::yaml_scalar_node_to_py_object: node is not scalar");
   }
   std::string value = a_node.as<std::string>();
-  NumberType number_type = getNumberType(value);
-  if (number_type == NumberType::INT) {
-    return PyLong_FromLong(a_node.as<long>());
-  } else if (number_type == NumberType::FLOAT) {
-    return PyFloat_FromDouble(a_node.as<double>());
-  } else {
-    BooleanType bool_type = getBooleanType(value);
-    if (bool_type == BooleanType::True) {
-      Py_RETURN_TRUE;
-    } else if (bool_type == BooleanType::False) {
-      Py_RETURN_FALSE;
-    } else {
-      return PyUnicode_FromString(a_node.as<std::string>().c_str());
+  if (a_node.Tag() != "!") {
+    NumberType number_type = getNumberType(value);
+    if (number_type == NumberType::INT) { // int
+      return PyLong_FromLong(a_node.as<long>());
+    } else if (number_type == NumberType::FLOAT) { // float
+      return PyFloat_FromDouble(a_node.as<double>());
+    } else { // bool
+      BooleanType bool_type = getBooleanType(value);
+      if (bool_type == BooleanType::True) {
+        Py_RETURN_TRUE;
+      } else if (bool_type == BooleanType::False) {
+        Py_RETURN_FALSE;
+      } 
     }
-  }
+  } // return as is
+  return PyUnicode_FromString(a_node.as<std::string>().c_str());
 }
 
 PyObject *YamlCacher::yaml_node_to_py_object(
