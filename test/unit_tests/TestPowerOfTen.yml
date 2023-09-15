@@ -1,0 +1,5 @@
+one_value: 5.0e-05
+another_value: 3.1415926e+10
+yet_another_value: 1.14e-99
+float_value_with_e: 2.500e-10
+another_float_value_with_e: 535.6423e+10
