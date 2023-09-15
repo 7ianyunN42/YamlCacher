@@ -67,6 +67,7 @@ inline static NumberType getNumberType(std::string& s) { //
 
       // Check for digits before the decimal point
       bool foundDigits = false;
+      bool foundDigitsAfterE = false;
       while (pos < s.length() && std::isdigit(s[pos])) {
           foundDigits = true;
           pos++;
@@ -84,6 +85,20 @@ inline static NumberType getNumberType(std::string& s) { //
 
       // If no digits found, it's not a valid number
       if (!foundDigits) return NumberType::NONE;
+
+      if (pos != s.length() && (s[pos] == 'e' || s[pos] == 'E')) {
+          pos++;
+          // Check for sign after e
+          if (pos < s.length() && (s[pos] == '-' || s[pos] == '+')) {
+              pos++;
+          }
+          // Check for digits after e
+          while (pos < s.length() && std::isdigit(s[pos])) {
+              foundDigitsAfterE = true;
+              pos++;
+          }
+          if (!foundDigitsAfterE) return NumberType::NONE;
+      }
 
       // Check for remaining characters
       while (pos < s.length() && std::isspace(s[pos])) {
@@ -153,20 +168,22 @@ PyObject * YamlCacher::yaml_scalar_node_to_py_object(
     throw std::runtime_error("YamlCacher::yaml_scalar_node_to_py_object: node is not scalar");
   }
   std::string value = a_node.as<std::string>();
-  if (a_node.Tag() != "!") {
+  if (a_node.Tag() != "!") { // tag of "!" means the value is a quoted value, return a python string
+      // check if is number
     NumberType number_type = getNumberType(value);
     if (number_type == NumberType::INT) { // int
       return PyLong_FromLong(a_node.as<long>());
     } else if (number_type == NumberType::FLOAT) { // float
       return PyFloat_FromDouble(a_node.as<double>());
-    } else { // bool
-      BooleanType bool_type = getBooleanType(value);
-      if (bool_type == BooleanType::True) {
-        Py_RETURN_TRUE;
-      } else if (bool_type == BooleanType::False) {
-        Py_RETURN_FALSE;
-      } 
     }
+
+    // check if is boolean
+    BooleanType bool_type = getBooleanType(value);
+    if (bool_type == BooleanType::True) {
+      Py_RETURN_TRUE;
+    } else if (bool_type == BooleanType::False) {
+      Py_RETURN_FALSE;
+    } 
   } // return as is
   return PyUnicode_FromString(a_node.as<std::string>().c_str());
 }
