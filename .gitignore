@@ -1,5 +1,4 @@
 /build
 /dist
 /.cache
-/test
 __pycache__
