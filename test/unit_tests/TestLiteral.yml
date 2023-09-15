@@ -3,3 +3,8 @@ another_string: "314159"
 
 one_string_val: 1.57
 another_string_val: 314159
+
+one_boolean: true
+boolean_literal: "true"
+another_boolean_literal: 'False'
+yet_another_boolean: True

@@ -1,4 +1,4 @@
-INPUTS_PARENT_FOLDER = "/home/n42/repo/neuro42-source"
+INPUTS_PARENT_FOLDER = "test/unit_tests"
 PRINT_PASSED_TEST:bool = True
 
 import yaml
