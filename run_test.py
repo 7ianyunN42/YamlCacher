@@ -1,4 +1,4 @@
-INPUTS_PARENT_FOLDER = "/home/n42/repo/neuro42-source"
+INPUTS_PARENT_FOLDER = "/home/n42/repo/neuro42-source" # all .yaml files under this folder will be tested, set this to test/unit_test to perform unit tests.
 PRINT_PASSED_TEST:bool = True
 
 import yaml
@@ -81,7 +81,7 @@ def test_file_change():
     
 
 def main():
-    #test_yaml_cacher()
+    test_yaml_cacher()
     test_file_change()
     
 

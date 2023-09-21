@@ -8,6 +8,7 @@
 #include <shared_mutex>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
+
 void get_md5_hash(std::string& a_filename, std::string& r_ret)
 {
     unsigned char c[MD5_DIGEST_LENGTH];
@@ -127,9 +128,7 @@ const YamlCacher::YamlData YamlCacher::get_yaml_data(std::string a_absolute_path
     }
     // either the yaml doesn't exist in map, or the md5 is different, either way we re-insert the entry
     std::unique_lock<std::shared_mutex> lock(this->_yaml_cache_map_lock); // modifying map
-    
-    this->_yaml_cache_map.emplace(a_absolute_path, YamlData{current_file_md5, YAML::LoadFile(a_absolute_path)});
-
+    this->_yaml_cache_map[a_absolute_path] = YamlData{current_file_md5, YAML::LoadFile(a_absolute_path)};
     return this->_yaml_cache_map[a_absolute_path];
 }
 
