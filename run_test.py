@@ -1,4 +1,4 @@
-INPUTS_PARENT_FOLDER = "test/unit_tests"
+INPUTS_PARENT_FOLDER = "/home/n42/repo/neuro42-source"
 PRINT_PASSED_TEST:bool = True
 
 import yaml
@@ -17,6 +17,10 @@ def compare_yaml_cacher_to_python_lib(yml_path:str) -> bool:
     # recursively compare content in dictionary
     def compare_dicts(ref_dict, sol_dict):
         ret:bool = True
+        for key in sol_dict:
+            if key not in ref_dict:
+                print(f"Key {key} not found in reference dictionary")
+                ret = False
         for key in ref_dict:
             if key not in sol_dict:
                 print(f"Key {key} not found in solution dictionary")
@@ -43,12 +47,42 @@ def test_yaml_cacher():
             if file.endswith(".yml") or file.endswith(".yaml"):
                 yml_path = os.path.abspath(os.path.join(root, file))
                 if compare_yaml_cacher_to_python_lib(yml_path):
-                    print(f"{file}\033[92m - PASS\033[0m") if PRINT_PASSED_TEST else None
+                    print(f"\033[92m PASS\033[0m - {file}") if PRINT_PASSED_TEST else None
                 else:
-                    print(f"{file}\033[91m - FAIL\033[0m")
+                    print(f"\033[91m FAIL\033[0m - {file}")
+                    
+def test_file_change():
+    import os
+    import yaml
+    
+    yaml_file = os.path.join(INPUTS_PARENT_FOLDER, "TestFileChange.yml")    
+
+    DATA = {'name': 'John Doe', 'age': 30, 'city': 'New York'}
+    # Create YAML file if it doesn't exist
+    with open(yaml_file, 'w') as file:
+        yaml.dump(DATA, file)
+
+    if not compare_yaml_cacher_to_python_lib(yaml_file):
+        print(f"\033[91m FAIL\033[0m - {yaml_file}")
+        return
+    
+    DATA['age'] = 31
+    
+    with open(yaml_file, 'w') as file:
+        yaml.dump(DATA, file)
+        
+    if not compare_yaml_cacher_to_python_lib(yaml_file):
+        print(f"\033[91m FAIL\033[0m - {yaml_file}")
+        return
+    
+    print(f"\033[92m PASS\033[0m - {yaml_file}") if PRINT_PASSED_TEST else None
+    
+
+    
 
 def main():
-    test_yaml_cacher()
+    #test_yaml_cacher()
+    test_file_change()
     
 
 
